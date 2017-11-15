@@ -1,24 +1,33 @@
 package info.gokit.androidarch;
 
+import android.arch.lifecycle.Lifecycle;
 import android.arch.lifecycle.Observer;
-import android.arch.lifecycle.ViewModelProvider;
 import android.arch.lifecycle.ViewModelProviders;
 import android.databinding.DataBindingUtil;
-import android.databinding.ViewDataBinding;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.BottomNavigationView;
+import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
 
+import dagger.android.AndroidInjection;
+import dagger.android.AndroidInjector;
+import dagger.android.support.HasSupportFragmentInjector;
 import info.gokit.androidarch.databinding.ActivityMainBinding;
-import info.gokit.androidarch.model.NameViewModel;
+import info.gokit.androidarch.model.Product;
+import info.gokit.androidarch.ui.ProductAdapter;
+import info.gokit.androidarch.ui.ProductClickCallback;
+import info.gokit.androidarch.viewmodel.NameViewModel;
+import info.gokit.androidarch.viewmodel.ProductListViewModel;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements HasSupportFragmentInjector {
+
+
+    private ProductAdapter mProductAdapter;
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -43,10 +52,37 @@ public class MainActivity extends AppCompatActivity {
     private NameViewModel mModel;
     private ActivityMainBinding mBinding;
 
+    private final ProductClickCallback mProductClickCallback = new ProductClickCallback() {
+        @Override
+        public void onClick(Product product) {
+            if (getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
+                Log.i("gokit", "Product click");
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        AndroidInjection.inject(this);
         super.onCreate(savedInstanceState);
         mBinding = DataBindingUtil.setContentView(this, R.layout.activity_main);
+
+        mProductAdapter = new ProductAdapter(mProductClickCallback);
+        mBinding.productsList.setAdapter(mProductAdapter);
+
+
+        final ProductListViewModel viewModel = ViewModelProviders.of(this).get(ProductListViewModel.class);
+        viewModel.getProducts().observe(this, products -> {
+            if( products != null) {
+                mBinding.setIsLoading(false);
+                mProductAdapter.setProductList(products);
+            } else {
+                mBinding.setIsLoading(true);
+            }
+            mBinding.executePendingBindings();
+        });
+
+
         mBinding.navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
         mBinding.updateMessage.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -68,4 +104,8 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @Override
+    public AndroidInjector<Fragment> supportFragmentInjector() {
+        return null;
+    }
 }

@@ -1,4 +1,4 @@
-package info.gokit.androidarch.model;
+package info.gokit.androidarch.viewmodel;
 
 import android.arch.lifecycle.MutableLiveData;
 import android.arch.lifecycle.ViewModel;
